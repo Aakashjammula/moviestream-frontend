@@ -19,12 +19,20 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   }
 }
 
-/** Is the home server reachable right now? */
-export async function serverOnline(timeoutMs = 4000): Promise<boolean> {
+export interface ServerStatus {
+  online: boolean;
+  /** Server is up but the movie drive (USB HDD) isn't connected: browse yes, play no. */
+  mediaMissing: boolean;
+}
+
+/** Is the home server reachable right now, and is the movie drive connected? */
+export async function serverStatus(timeoutMs = 4000): Promise<ServerStatus> {
   try {
     const res = await fetch(apiUrl("/health"), { cache: "no-store", signal: AbortSignal.timeout(timeoutMs) });
-    return res.ok;
+    if (!res.ok) return { online: false, mediaMissing: false };
+    const data = (await res.json().catch(() => ({}))) as { media?: string };
+    return { online: true, mediaMissing: data.media === "missing" };
   } catch {
-    return false;
+    return { online: false, mediaMissing: false };
   }
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IBack, IChevL, IChevR, ICheck, IClose, IFull, IFwd10, IInfo, ILogout, IMute, IPause, IPlay, IPlus, IRefresh, IRew10, IVol } from "./icons";
-import { apiFetch, apiUrl } from "./lib/api";
+import { apiFetch, apiUrl, serverStatus } from "./lib/api";
 
 interface Sub {
   index: number;
@@ -1172,6 +1172,8 @@ function PlayerModal({
   const [subs, setSubs] = useState<Sub[]>([]);
   const [isPlaying, setIsPlaying] = useState(true);
   const [buffering, setBuffering] = useState(true);
+  const [playError, setPlayError] = useState<string | null>(null);
+  useEffect(() => setPlayError(null), [playing.id]);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [buffered, setBuffered] = useState(0);
@@ -1370,6 +1372,19 @@ function PlayerModal({
             persist();
           }}
           onWaiting={() => setBuffering(true)}
+          onError={() => {
+            setBuffering(false);
+            // Ask the server why: the usual reason is an unplugged movie drive.
+            serverStatus().then((st) =>
+              setPlayError(
+                !st.online
+                  ? "The server went offline. MovieStream is only available while it's running at home."
+                  : st.mediaMissing
+                    ? "Movie drive isn't connected. Plug it in at home, then try again."
+                    : "This video couldn't be played.",
+              ),
+            );
+          }}
           onPlaying={() => setBuffering(false)}
           onCanPlay={() => setBuffering(false)}
           onTimeUpdate={(e) => {
@@ -1413,6 +1428,7 @@ function PlayerModal({
             <div className="spinner" />
           </div>
         )}
+        {playError && <div className="play-error" role="alert">{playError}</div>}
         {remuxNote && (
           <div className="remux-note">
             Preparing a Firefox-compatible copy — one-time wait, then it plays instantly every time.

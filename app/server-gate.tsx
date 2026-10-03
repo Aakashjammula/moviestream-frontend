@@ -2,17 +2,22 @@
 
 // Shows a friendly "server offline" screen instead of the app whenever the home
 // server (behind the Cloudflare Tunnel) can't be reached, and retries automatically.
+// While online, a banner warns when the movie drive isn't connected.
 import { useCallback, useEffect, useState } from "react";
-import { OFFLINE_EVENT, serverOnline } from "./lib/api";
+import { OFFLINE_EVENT, serverStatus } from "./lib/api";
 
 const RETRY_MS = 15_000;
+const MEDIA_RECHECK_MS = 30_000;
 
 export default function ServerGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<"checking" | "online" | "offline">("checking");
+  const [mediaMissing, setMediaMissing] = useState(false);
 
   const check = useCallback(async () => {
     setStatus((s) => (s === "online" ? s : "checking"));
-    setStatus((await serverOnline()) ? "online" : "offline");
+    const s = await serverStatus();
+    setStatus(s.online ? "online" : "offline");
+    setMediaMissing(s.mediaMissing);
   }, []);
 
   useEffect(() => {
@@ -23,13 +28,25 @@ export default function ServerGate({ children }: { children: React.ReactNode }) 
     return () => window.removeEventListener(OFFLINE_EVENT, onOffline);
   }, [check]);
 
+  // Offline: retry often. Online: re-check the drive now and then so the banner clears by itself.
   useEffect(() => {
-    if (status !== "offline") return;
-    const t = setInterval(check, RETRY_MS);
+    if (status === "checking") return;
+    const t = setInterval(check, status === "offline" ? RETRY_MS : MEDIA_RECHECK_MS);
     return () => clearInterval(t);
   }, [status, check]);
 
-  if (status === "online") return <>{children}</>;
+  if (status === "online") {
+    return (
+      <>
+        {mediaMissing && (
+          <div className="media-banner" role="status">
+            Movie drive isn&apos;t connected. You can browse your library, but playback is unavailable until it&apos;s plugged in.
+          </div>
+        )}
+        {children}
+      </>
+    );
+  }
 
   return (
     <div className="login-wrap">

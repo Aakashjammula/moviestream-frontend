@@ -1631,3 +1631,33 @@ video::cue {
 /* Offline screen (server-gate.tsx) */
 .offline-card { text-align: center; }
 .offline-title { font-size: 1.25rem; font-weight: 700; margin: 8px 0 0; }
+
+/* Movie drive unplugged (server-gate.tsx) */
+.media-banner {
+  position: sticky;
+  top: 0;
+  z-index: 45; /* above .topbar (40), below detail .overlay (50) and the player (100) */
+  background: #3a2a06;
+  color: #fde68a;
+  border-bottom: 1px solid #7c5a0c;
+  padding: 8px 16px;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Playback failed (PlayerModal) */
+.play-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(10, 10, 10, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 22px;
+  font-size: 15px;
+  color: #f1f5f9;
+  max-width: min(460px, 86vw);
+  text-align: center;
+  z-index: 7;
+}
