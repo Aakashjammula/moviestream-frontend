@@ -1661,3 +1661,4 @@ video::cue {
   text-align: center;
   z-index: 7;
 }
+.offline-contact { color: inherit; text-decoration: underline; display: inline-block; white-space: nowrap; }

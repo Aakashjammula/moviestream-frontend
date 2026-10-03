@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IBack, IChevL, IChevR, ICheck, IClose, IFull, IFwd10, IInfo, ILogout, IMute, IPause, IPlay, IPlus, IRefresh, IRew10, IVol } from "./icons";
 import { apiFetch, apiUrl, serverStatus } from "./lib/api";
+import { CONTACT_EMAIL } from "./server-gate";
 
 interface Sub {
   index: number;
@@ -1378,7 +1379,7 @@ function PlayerModal({
             serverStatus().then((st) =>
               setPlayError(
                 !st.online
-                  ? "The server went offline. MovieStream is only available while it's running at home."
+                  ? `MovieStream is offline. Please contact ${CONTACT_EMAIL}`
                   : st.mediaMissing
                     ? "Movie drive isn't connected. Plug it in at home, then try again."
                     : "This video couldn't be played.",

@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { OFFLINE_EVENT, serverStatus } from "./lib/api";
 
+export const CONTACT_EMAIL = "contact@aakashjammula.com";
 const RETRY_MS = 15_000;
 const MEDIA_RECHECK_MS = 30_000;
 
@@ -58,10 +59,9 @@ export default function ServerGate({ children }: { children: React.ReactNode }) 
           <p className="login-sub">Connecting to the server…</p>
         ) : (
           <>
-            <p className="offline-title">Server is offline</p>
+            <p className="offline-title">MovieStream is offline</p>
             <p className="login-sub">
-              MovieStream runs on a computer at home and is only available while it&apos;s switched on.
-              This page will reconnect automatically.
+              Please contact <a className="offline-contact" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
             </p>
             <button className="btn-signin wide" type="button" onClick={check}>
               Try again
