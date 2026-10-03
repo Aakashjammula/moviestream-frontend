@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import ServerGate from "./server-gate";
 
 export const metadata: Metadata = {
   title: "Movie Streaming",
@@ -18,7 +19,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body style={{ margin: 0 }}>{children}</body>
+      <body style={{ margin: 0 }}>
+        <ServerGate>{children}</ServerGate>
+      </body>
     </html>
   );
 }

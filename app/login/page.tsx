@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { apiFetch } from "../lib/api";
 
 function LoginForm() {
   const router = useRouter();
@@ -12,7 +13,7 @@ function LoginForm() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    fetch("/api/me").then((res) => {
+    apiFetch("/api/me").then((res) => {
       if (res.ok) router.replace(next);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -23,7 +24,7 @@ function LoginForm() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/login", {
+      const res = await apiFetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),

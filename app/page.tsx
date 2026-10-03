@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IBack, IChevL, IChevR, ICheck, IClose, IFull, IFwd10, IInfo, ILogout, IMute, IPause, IPlay, IPlus, IRefresh, IRew10, IVol } from "./icons";
+import { apiFetch, apiUrl } from "./lib/api";
 
 interface Sub {
   index: number;
@@ -93,9 +94,9 @@ interface Session {
 type View = "home" | "movies" | "tv" | "mylist" | "sessions";
 
 async function api<T>(path: string): Promise<T> {
-  const res = await fetch(path);
+  const res = await apiFetch(path);
   if (res.status === 401 && typeof window !== "undefined") {
-    window.location.href = "/login?next=" + encodeURIComponent(window.location.pathname);
+    window.location.href = "/login/?next=" + encodeURIComponent(window.location.pathname);
     throw new Error("Login required");
   }
   if (!res.ok) throw new Error(`API returned ${res.status}`);
@@ -103,9 +104,9 @@ async function api<T>(path: string): Promise<T> {
 }
 
 async function apiMut<T>(path: string, method: string): Promise<T> {
-  const res = await fetch(path, { method });
+  const res = await apiFetch(path, { method });
   if (res.status === 401 && typeof window !== "undefined") {
-    window.location.href = "/login?next=" + encodeURIComponent(window.location.pathname);
+    window.location.href = "/login/?next=" + encodeURIComponent(window.location.pathname);
     throw new Error("Login required");
   }
   if (!res.ok) throw new Error(`API returned ${res.status}`);
@@ -365,7 +366,7 @@ export default function Home() {
       <div className="poster">
         <PosterImage
           src={movie.poster_url}
-          fallbackSrc={`/api/poster/${movie.id}`}
+          fallbackSrc={apiUrl(`/api/poster/${movie.id}`)}
           alt={movie.title}
           letter={movie.title}
         />
@@ -479,8 +480,8 @@ export default function Home() {
           className="btn"
           title="Log out"
           onClick={() => {
-            fetch("/api/logout", { method: "POST" }).finally(() => {
-              window.location.href = "/login";
+            apiFetch("/api/logout", { method: "POST" }).finally(() => {
+              window.location.href = "/login/";
             });
           }}
         >
@@ -792,7 +793,7 @@ function DetailMovieModal({
                     <div className="poster">
                       <PosterImage
                         src={m.poster_url}
-                        fallbackSrc={`/api/poster/${m.id}`}
+                        fallbackSrc={apiUrl(`/api/poster/${m.id}`)}
                         alt={m.title}
                         letter={m.title}
                       />
@@ -912,7 +913,7 @@ function DetailShowModal({
                 <div className="ep-thumb">
                   <PosterImage
                     src=""
-                    fallbackSrc={`/api/poster/${ep.id}`}
+                    fallbackSrc={apiUrl(`/api/poster/${ep.id}`)}
                     alt={ep.title}
                     letter={ep.title}
                   />
@@ -956,7 +957,7 @@ function DetailShowModal({
                     <div className="poster">
                       <PosterImage
                         src={m.poster_url}
-                        fallbackSrc={`/api/poster/${m.id}`}
+                        fallbackSrc={apiUrl(`/api/poster/${m.id}`)}
                         alt={m.title}
                         letter={m.title}
                       />
@@ -1012,9 +1013,9 @@ function SessionsView() {
   useEffect(load, [load]);
 
   const revoke = (id: string, current: boolean) => {
-    fetch(`/api/sessions/${encodeURIComponent(id)}`, { method: "DELETE" })
+    apiFetch(`/api/sessions/${encodeURIComponent(id)}`, { method: "DELETE" })
       .then(() => {
-        if (current) window.location.href = "/login";
+        if (current) window.location.href = "/login/";
         else load();
       })
       .catch((err: Error) => setError(err.message));
@@ -1099,7 +1100,7 @@ function ContinueCard({
       <div className="poster landscape">
         <PosterImage
           src=""
-          fallbackSrc={`/api/poster/${item.id}`}
+          fallbackSrc={apiUrl(`/api/poster/${item.id}`)}
           alt={item.title}
           letter={item.title}
         />
@@ -1187,6 +1188,24 @@ function PlayerModal({
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // <track> can't send the login cookie to another origin without CORS on the media
+  // responses, so fetch the VTT ourselves and hand the player a same-origin blob URL.
+  const [subUrl, setSubUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const sub = activeSub >= 0 ? subs[activeSub] : undefined;
+    if (!sub) { setSubUrl(null); return; }
+    let url: string | null = null, cancelled = false;
+    apiFetch(`/api/subs/${playing.id}/${sub.index}`)
+      .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`subs ${r.status}`))))
+      .then((b) => {
+        if (cancelled) return;
+        url = URL.createObjectURL(new Blob([b], { type: "text/vtt" }));
+        setSubUrl(url);
+      })
+      .catch(() => !cancelled && setSubUrl(null));
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
+  }, [playing.id, activeSub, subs]);
 
   useEffect(() => {
     api<Sub[]>(`/api/subs/${playing.id}`)
@@ -1338,7 +1357,7 @@ function PlayerModal({
       <div className="player-shell" ref={shellRef}>
         <video
           ref={videoRef}
-          src={needsRemux ? `/api/remux/${playing.id}` : `/api/stream/${playing.id}`}
+          src={apiUrl(needsRemux ? `/api/remux/${playing.id}` : `/api/stream/${playing.id}`)}
           autoPlay
           preload="auto"
           onClick={onVideoClick}
@@ -1377,11 +1396,11 @@ function PlayerModal({
             if (next) onNext(next);
           }}
         >
-          {activeSub >= 0 && subs[activeSub] && (
+          {activeSub >= 0 && subs[activeSub] && subUrl && (
             <track
-              key={subs[activeSub].index}
+              key={subUrl}
               kind="subtitles"
-              src={`/api/subs/${playing.id}/${subs[activeSub].index}`}
+              src={subUrl}
               srcLang={subs[activeSub].lang}
               label={subs[activeSub].lang}
               default

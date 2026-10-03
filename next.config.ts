@@ -1,19 +1,11 @@
 import type { NextConfig } from "next";
 
+// Static export: the whole UI is client-side, so it builds to plain files (out/) that
+// Vercel (or any static host) serves. The API lives on the home server, at
+// NEXT_PUBLIC_API_URL; nothing is proxied through the frontend host, video included.
 const nextConfig: NextConfig = {
-  // Proxy API calls to the backend. This runs server-side inside the
-  // frontend container, so it works regardless of which host/port or
-  // IP the browser used to reach the frontend (localhost, LAN IP,
-  // or even the container IP directly). Nginx also proxies /api/,
-  // so this is a fallback for direct-frontend access.
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: "http://backend:8000/api/:path*",
-      },
-    ];
-  },
+  output: "export",
+  trailingSlash: true,
 };
 
 export default nextConfig;
